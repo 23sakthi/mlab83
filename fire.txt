@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Management App</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #eef;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        li button {
+            margin-left: 5px;
+            background: #f44336;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        li button.edit {
+            background: #2196f3;
+        }
+        li button.edit:hover {
+            background: #1976d2;
+        }
+        li button:hover {
+            background: #d32f2f;
+        }
+        form input, form button {
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        form button {
+            background: #4caf50;
+            color: #fff;
+            cursor: pointer;
+        }
+        form button:hover {
+            background: #388e3c;
+        }
+    </style>
+</head>
+<body ng-app="eventApp" ng-controller="MainController">
+    <div class="container">
+        <h1>Event Management</h1>
+        
+        <h2>Events</h2>
+        <ul id="event-list">
+            <li ng-repeat="event in events">
+                <div>
+                    <strong>{{event.eventName}}</strong><br>
+                    {{event.name}} - {{event.phone}} - {{event.email}}<br>
+                    Date: {{event.eventDate | date:'yyyy-MM-dd'}}
+                </div>
+                <div>
+                    <button class="edit" ng-click="editEvent($index)">Edit</button>
+                    <button ng-click="deleteEvent($index)">Delete</button>
+                </div>
+            </li>
+        </ul>
+        
+        <h2 ng-if="!isEditing">Add Event</h2>
+        <h2 ng-if="isEditing">Update Event</h2>
+        <form id="event-form" ng-submit="isEditing ? updateEvent() : addEvent()">
+            <input type="text" id="name" ng-model="newEvent.name" placeholder="Your Name" required>
+            <input type="tel" id="phone" ng-model="newEvent.phone" placeholder="Phone" required>
+            <input type="email" id="email" ng-model="newEvent.email" placeholder="Email" required>
+            <input type="text" id="eventName" ng-model="newEvent.eventName" placeholder="Event Name" required>
+            <input type="date" id="eventDate" ng-model="newEvent.eventDate" required>
+            <button type="submit">{{isEditing ? 'Update Event' : 'Add Event'}}</button>
+        </form>
+    </div>
+
+    <!-- AngularJS library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    
+    <!-- Script to manage the app -->
+    <script>
+        var app = angular.module('eventApp', []);
+
+        app.controller('MainController', function($scope) {
+            $scope.events = []; // Initialize the event list
+            $scope.newEvent = {}; // Initialize the new event object
+            $scope.isEditing = false; // Track whether an event is being edited
+            $scope.editIndex = -1; // Store the index of the event being edited
+
+            // Add a new event to the in-memory list
+            $scope.addEvent = function() {
+                $scope.events.push({
+                    name: $scope.newEvent.name,
+                    phone: $scope.newEvent.phone,
+                    email: $scope.newEvent.email,
+                    eventName: $scope.newEvent.eventName,
+                    eventDate: $scope.newEvent.eventDate
+                });
+                $scope.newEvent = {}; // Clear the form after adding an event
+            };
+
+            // Start editing an event
+            $scope.editEvent = function(index) {
+                $scope.isEditing = true;
+                $scope.editIndex = index;
+                $scope.newEvent = angular.copy($scope.events[index]); // Load event data into form
+            };
+
+            // Update the edited event
+            $scope.updateEvent = function() {
+                if ($scope.editIndex > -1) {
+                    $scope.events[$scope.editIndex] = angular.copy($scope.newEvent);
+                    $scope.isEditing = false;
+                    $scope.editIndex = -1;
+                    $scope.newEvent = {}; // Clear the form after updating
+                }
+            };
+
+            // Delete an event from the in-memory list
+            $scope.deleteEvent = function(index) {
+                $scope.events.splice(index, 1);
+            };
+        });
+    </script>
+</body>
+</html>
+
+
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyD0mq-vbIWNy6YI5jn7qEArCg18LfAHrUY",
+    authDomain: "cloud-95f5f.firebaseapp.com",
+    projectId: "cloud-95f5f",
+    storageBucket: "cloud-95f5f.firebasestorage.app",
+    messagingSenderId: "1050105849040",
+    appId: "1:1050105849040:web:ec315c370f53d2dbed6ad5",
+    measurementId: "G-GT93SJN0DW"
+  };
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
