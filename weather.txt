@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Weather App</h1>
+    <form id="weather-form">
+      <div class="input-group">
+        <label for="location">Search Location:</label>
+        <input type="text" id="location" name="location" placeholder="Enter city name" required>
+        <ul id="location-list" class="location-list"></ul>
+      </div>
+      <button type="submit">Get Weather</button>
+    </form>
+    <div id="result" class="weather-info"></div>
+  </div>
+  <script>
+    const locationInput = document.getElementById('location');
+    const locationList = document.getElementById('location-list');
+
+    locationInput.addEventListener('input', async function () {
+      const query = locationInput.value.trim();
+
+      if (query.length > 2) {
+        try {
+          const response = await fetch(`/locations/${query}`);
+          const data = await response.json();
+
+          locationList.innerHTML = '';
+          data.forEach(location => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `${location.name}, ${location.country}`;
+            listItem.dataset.location = location.name;  
+            locationList.appendChild(listItem);
+          });
+
+          const items = locationList.querySelectorAll('li');
+          items.forEach(item => {
+            item.addEventListener('click', function () {
+              locationInput.value = item.dataset.location;
+              locationList.innerHTML = ''; 
+            });
+          });
+
+        } catch (error) {
+          console.error('Error fetching locations:', error);
+        }
+      } else {
+        locationList.innerHTML = ''; 
+      }
+    });
+
+    document.getElementById('weather-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const location = locationInput.value;
+
+      if (!location) {
+        document.getElementById('result').innerText = 'Error: Please select a location.';
+        return;
+      }
+
+      try {
+        const response = await fetch('/weather', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ location }),
+        });
+        const data = await response.json();
+        if (data.error) {
+          document.getElementById('result').innerText = 'Error: Unable to fetch weather data.';
+        } else {
+          document.getElementById('result').innerHTML = `
+            <h2>Weather in ${data.location.name}, ${data.location.country}</h2>
+            <p><strong>Temperature:</strong> ${data.current.temp_c}°C</p>
+            <p><strong>Condition:</strong> ${data.current.condition.text}</p>
+            <p><strong>Wind:</strong> ${data.current.wind_kph} kph</p>
+            <p><strong>Humidity:</strong> ${data.current.humidity}%</p>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('result').innerText = 'Error: Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #e0f7fa;
+}
+
+.container {
+  background: #ffffff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 400px;
+}
+
+h1 {
+  margin-bottom: 20px;
+  color: #00796b;
+}
+
+.input-group {
+  margin-bottom: 15px;
+  text-align: left;
+  position: relative;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+ul.location-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  background-color: white;
+  width: 100%;
+  border: 1px solid #ddd;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+ul.location-list li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+ul.location-list li:hover {
+  background-color: #f0f0f0;
+}
+
+button {
+  background-color: #00796b;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #004d40;
+}
+
+.weather-info {
+  margin-top: 20px;
+  font-size: 18px;
+  color: #333;
+}
+const express = require('express');
+const axios = require('axios');
+const path = require('path');
+const app = express();
+
+const API_KEY = '309d046ab271485b8a443536242411';
+const WEATHER_API_URL = `http://api.weatherapi.com/v1/current.json?key=${API_KEY}`;
+const GEO_API_URL = `http://api.weatherapi.com/v1/search.json?key=${API_KEY}`;
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.post('/weather', async (req, res) => {
+    const { location } = req.body;
+    try {
+        const response = await axios.get(`${WEATHER_API_URL}&q=${location}&aqi=no`);
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching weather data. Please check the location and try again.' });
+    }
+});
+app.get('/locations/:query', async (req, res) => {
+    const { query } = req.params;
+    try {
+        const response = await axios.get(`${GEO_API_URL}&q=${query}`);
+        res.json(response.data); 
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching locations. Please try again.' });
+    }
+});
+
+app.listen(3000, () => {
+    console.log('Weather app is running at http://localhost:3000');
+});

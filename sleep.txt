@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #007BFF;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #444;
+            margin-top: 0;
+        }
+
+        form {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        form label {
+            font-size: 14px;
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+
+        form input, form button {
+            display: block;
+            margin: 5px 0 15px;
+            padding: 10px;
+            width: calc(100% - 20px);
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        form button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        form button:hover {
+            background-color: #0056b3;
+        }
+
+        .form-section {
+            margin-bottom: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        table th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Event Management System</h1>
+    </header>
+
+    <div class="container">
+        <div class="form-section">
+            <h2>Add Event</h2>
+            <form id="addEventForm">
+                <label for="addName">Name</label>
+                <input type="text" id="addName" placeholder="Enter your name" required>
+
+                <label for="addPhone">Phone</label>
+                <input type="text" id="addPhone" placeholder="Enter your phone number" required>
+
+                <label for="addEmail">Email</label>
+                <input type="email" id="addEmail" placeholder="Enter your email address" required>
+
+                <label for="addEventName">Event Name</label>
+                <input type="text" id="addEventName" placeholder="Enter the event name" required>
+
+                <label for="addEventDate">Event Date</label>
+                <input type="date" id="addEventDate" required>
+
+                <button type="submit">Add Event</button>
+            </form>
+        </div>
+        <div class="form-section">
+            <h2>Update Event</h2>
+            <form id="fetchEventForm">
+                <label for="fetchEventId">Event ID</label>
+                <input type="number" id="fetchEventId" placeholder="Enter Event ID to Update" required>
+                <button type="submit">Fetch Event</button>
+            </form>
+            <form id="updateEventForm" class="hidden">
+                <label for="updateName">Name</label>
+                <input type="text" id="updateName" placeholder="Enter your name">
+
+                <label for="updatePhone">Phone</label>
+                <input type="text" id="updatePhone" placeholder="Enter your phone number">
+
+                <label for="updateEmail">Email</label>
+                <input type="email" id="updateEmail" placeholder="Enter your email address">
+
+                <label for="updateEventName">Event Name</label>
+                <input type="text" id="updateEventName" placeholder="Enter the event name">
+
+                <label for="updateEventDate">Event Date</label>
+                <input type="date" id="updateEventDate">
+
+                <button type="submit">Update Event</button>
+            </form>
+        </div>
+        <div class="form-section">
+            <h2>Delete Event</h2>
+            <form id="deleteEventForm">
+                <label for="deleteEventId">Event ID</label>
+                <input type="number" id="deleteEventId" placeholder="Enter Event ID to Delete" required>
+                <button type="submit">Delete Event</button>
+            </form>
+        </div>
+        <h2>Event List</h2>
+        <table id="eventTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Event Name</th>
+                    <th>Event Date</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const eventTableBody = document.querySelector('#eventTable tbody');
+        function clearForm(formId) {
+            document.getElementById(formId).reset();
+        }
+        async function fetchEvents() {
+            const response = await fetch('/api/events');
+            const events = await response.json();
+            eventTableBody.innerHTML = '';
+            events.forEach(event => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${event.id}</td>
+                    <td>${event.name}</td>
+                    <td>${event.email}</td>
+                    <td>${event.phone}</td>
+                    <td>${event.eventName}</td>
+                    <td>${event.eventDate}</td>
+                `;
+                eventTableBody.appendChild(row);
+            });
+        }
+        document.getElementById('addEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newEvent = {
+                name: document.getElementById('addName').value,
+                phone: document.getElementById('addPhone').value,
+                email: document.getElementById('addEmail').value,
+                eventName: document.getElementById('addEventName').value,
+                eventDate: document.getElementById('addEventDate').value,
+            };
+            await fetch('/api/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newEvent)
+            });
+            clearForm('addEventForm');
+            fetchEvents();
+        });
+        document.getElementById('fetchEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('fetchEventId').value;
+            const response = await fetch(`/api/events/${id}`);
+            if (response.ok) {
+                const event = await response.json();
+                document.getElementById('updateName').value = event.name;
+                document.getElementById('updatePhone').value = event.phone;
+                document.getElementById('updateEmail').value = event.email;
+                document.getElementById('updateEventName').value = event.eventName;
+                document.getElementById('updateEventDate').value = event.eventDate;
+                document.getElementById('updateEventForm').classList.remove('hidden');
+                document.getElementById('updateEventForm').onsubmit = async (e) => {
+                    e.preventDefault();
+                    const updatedEvent = {
+                        name: document.getElementById('updateName').value,
+                        phone: document.getElementById('updatePhone').value,
+                        email: document.getElementById('updateEmail').value,
+                        eventName: document.getElementById('updateEventName').value,
+                        eventDate: document.getElementById('updateEventDate').value,
+                    };
+                    await fetch(`/api/events/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatedEvent)
+                    });
+                    clearForm('updateEventForm');
+                    document.getElementById('updateEventForm').classList.add('hidden');
+                    fetchEvents();
+                };
+            } else {
+                alert('Event not found.');
+            }
+        });
+        document.getElementById('deleteEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('deleteEventId').value;
+            await fetch(`/api/events/${id}`, { method: 'DELETE' });
+            fetchEvents();
+        });
+        fetchEvents();
+    </script>
+</body>
+</html>
+const express = require('express');
+const path = require('path');
+const app = express();
+const port = 3000;
+
+let events = []; 
+
+app.use(express.json()); 
+app.use(express.static(path.join(__dirname, 'public'))); 
+
+// API: Fetch all events
+app.get('/api/events', (req, res) => {
+    res.json(events);
+});
+
+app.get('/api/events/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const event = events.find(e => e.id === id);
+    if (event) {
+        res.json(event);
+    } else {
+        res.status(404).send('Event not found');
+    }
+});
+
+app.post('/api/events', (req, res) => {
+    const { name, phone, email, eventName, eventDate } = req.body;
+    if (!name || !phone || !email || !eventName || !eventDate ) {
+        return res.status(400).send('All fields are required.');
+    }
+    const event = {
+        id: events.length ? events[events.length - 1].id + 1 : 1, 
+        name,
+        phone,
+        email,
+        eventName,
+        eventDate,
+    };
+    events.push(event);
+
+    console.log('Event added:', event); 
+    res.status(201).json(event);
+});
+app.put('/api/events/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const { name, phone, email, eventName, eventDate  } = req.body;
+
+    const index = events.findIndex(e => e.id === id);
+
+    if (index === -1) {
+        return res.status(404).send('Event not found');
+    }
+    if (!name || !phone || !email || !eventName || !eventDate ) {
+        return res.status(400).send('All fields are required.');
+    }
+    events[index] = {
+        id,
+        name,
+        phone,
+        email,
+        eventName,
+        eventDate,
+    };
+
+    console.log('Event updated:', events[index]); 
+    res.json(events[index]);
+});
+app.delete('/api/events/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = events.findIndex(e => e.id === id);
+
+    if (index === -1) {
+        return res.status(404).send('Event not found');
+    }
+    events.splice(index, 1);
+    console.log(`Event with ID ${id} deleted`); 
+    res.send(`Event with ID ${id} deleted`);
+});
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});

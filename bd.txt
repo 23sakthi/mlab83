@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Management</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+        }
+        header .auth-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        header button {
+            padding: 5px 15px;
+            background-color: white;
+            color: #007bff;
+            border: 1px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        header button:hover {
+            background-color: #e2e6ea;
+        }
+        main {
+            padding: 20px;
+        }
+        form {
+            margin-bottom: 30px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        td button {
+            padding: 5px 10px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        td button:hover {
+            background-color: #c82333;
+        }
+        td button.edit {
+            background-color: #007bff;
+        }
+        td button.edit:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Event Management System</h1>
+        <div class="auth-buttons">
+            <button id="loginBtn"><a href ="/login">Login</a></button>
+            <button id="logoutBtn" style="display: none;"><a href="/logout">Logout<a></button>
+        </div>
+    </header>
+    <main>
+        <form id="eventForm">
+            <label for="addName">Name</label>
+            <input type="text" id="addName" placeholder="Enter your name" required>
+            
+            <label for="addPhone">Phone</label>
+            <input type="text" id="addPhone" placeholder="Enter your phone number" required>
+            
+            <label for="addEmail">Email</label>
+            <input type="email" id="addEmail" placeholder="Enter your email address" required>
+            
+            <label for="addEventName">Event Name</label>
+            <input type="text" id="addEventName" placeholder="Enter the event name" required>
+            
+            <label for="addEventDate">Event Date</label>
+            <input type="date" id="addEventDate" required>
+            
+            <button type="submit" id="addButton">Add Event</button>
+            <button type="button" id="editButton" style="display: none;">Update Event</button>
+        </form>
+        
+        <h2>Event List</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Event Name</th>
+                    <th>Event Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="eventTable">
+            </tbody>
+        </table>
+    </main>
+    <script>
+        const apiUrl = "http://localhost:3000/events";
+        const eventForm = document.getElementById("eventForm");
+        const eventTable = document.getElementById("eventTable");
+        const addButton = document.getElementById("addButton");
+        const editButton = document.getElementById("editButton");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+
+        let editEventId = null;
+
+        loginBtn.addEventListener("click", () => {
+            loginBtn.style.display = "none";
+            logoutBtn.style.display = "inline-block";
+        });
+
+        logoutBtn.addEventListener("click", () => {
+            loginBtn.style.display = "inline-block";
+            logoutBtn.style.display = "none";
+        });
+
+        async function fetchEvents() {
+            const response = await fetch(apiUrl);
+            const events = await response.json();
+            eventTable.innerHTML = "";
+            events.forEach(event => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${event.name}</td>
+                    <td>${event.phone}</td>
+                    <td>${event.email}</td>
+                    <td>${event.eventName}</td>
+                    <td>${event.eventDate}</td>
+                    <td>
+                        <button class="edit" onclick="editEvent('${event._id}', '${event.name}', '${event.phone}', '${event.email}', '${event.eventName}', '${event.eventDate}')">Edit</button>
+                        <button onclick="deleteEvent('${event._id}')">Delete</button>
+                    </td>
+                `;
+                eventTable.appendChild(row);
+            });
+        }
+
+        eventForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const newEvent = {
+                name: document.getElementById("addName").value,
+                phone: document.getElementById("addPhone").value,
+                email: document.getElementById("addEmail").value,
+                eventName: document.getElementById("addEventName").value,
+                eventDate: document.getElementById("addEventDate").value,
+            };
+            await fetch(apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newEvent),
+            });
+            eventForm.reset();
+            fetchEvents();
+        });
+
+        async function editEvent(id, name, phone, email, eventName, eventDate) {
+            editEventId = id;
+            document.getElementById("addName").value = name;
+            document.getElementById("addPhone").value = phone;
+            document.getElementById("addEmail").value = email;
+            document.getElementById("addEventName").value = eventName;
+            document.getElementById("addEventDate").value = eventDate;
+            addButton.style.display = "none";
+            editButton.style.display = "inline-block";
+        }
+
+        editButton.addEventListener("click", async () => {
+            const updatedEvent = {
+                name: document.getElementById("addName").value,
+                phone: document.getElementById("addPhone").value,
+                email: document.getElementById("addEmail").value,
+                eventName: document.getElementById("addEventName").value,
+                eventDate: document.getElementById("addEventDate").value,
+            };
+            await fetch(`${apiUrl}/${editEventId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedEvent),
+            });
+            eventForm.reset();
+            addButton.style.display = "inline-block";
+            editButton.style.display = "none";
+            fetchEvents();
+        });
+
+        async function deleteEvent(id) {
+            await fetch(`${apiUrl}/${id}`, { method: "DELETE" });
+            fetchEvents();
+        }
+
+        fetchEvents();
+    </script>
+</body>
+</html>const express = require('express');
+const { MongoClient, ObjectId } = require('mongodb');
+const bodyParser = require('body-parser');
+const path = require('path');
+const { auth } = require('express-openid-connect');
+
+const app = express();
+const port = 3000;
+
+// Auth0 configuration
+const config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: 'a long, randomly-generated string stored in env',
+  baseURL: 'http://localhost:3000',
+  clientID: '3UxnbyHAWuOdUpEzMF4jpcw0AbbebKoX',
+  issuerBaseURL: 'https://railway-compass.us.auth0.com',
+};
+
+// Middleware
+app.use(auth(config));
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// MongoDB connection
+const uri = "mongodb+srv://sarvani:Sarvani$2324@railwayscluster.1svsz.mongodb.net/?retryWrites=true&w=majority&appName=RailwaysCluster";
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const dbName = "eventDB";
+const collectionName = "events";
+
+// Routes
+app.get('/', (req, res) => {
+  if (req.oidc.isAuthenticated()) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    res.redirect('/login');
+  }
+});
+
+app.get('/logout', (req, res) => {
+  req.logout();
+  res.redirect('/');
+});
+
+// Connect to MongoDB
+async function connectDB() {
+  try {
+    await client.connect();
+    console.log("Connected to MongoDB Atlas");
+  } catch (err) {
+    console.error("Error connecting to MongoDB:", err);
+  }
+}
+connectDB();
+
+// Add a new event
+app.post('/events', async (req, res) => {
+  const { name, phone, email, eventName, eventDate } = req.body;
+
+  if (!name || !phone || !email || !eventName || !eventDate) {
+    return res.status(400).send({ message: "All fields are required" });
+  }
+
+  try {
+    const db = client.db(dbName);
+    const result = await db.collection(collectionName).insertOne(req.body);
+    res.status(201).send({ message: "Event added successfully", id: result.insertedId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Error adding event" });
+  }
+});
+
+// Get all events
+app.get('/events', async (req, res) => {
+  try {
+    const db = client.db(dbName);
+    const events = await db.collection(collectionName).find().toArray();
+    res.status(200).send(events);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Error retrieving events" });
+  }
+});
+
+// Update an event
+app.put('/events/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: "Invalid ID" });
+  }
+
+  try {
+    const db = client.db(dbName);
+    const result = await db.collection(collectionName).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: req.body }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: "Event not found" });
+    }
+
+    res.status(200).send({ message: "Event updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Error updating event" });
+  }
+});
+
+// Delete an event
+app.delete('/events/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: "Invalid ID" });
+  }
+
+  try {
+    const db = client.db(dbName);
+    const result = await db.collection(collectionName).deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: "Event not found" });
+    }
+
+    res.status(200).send({ message: "Event deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Error deleting event" });
+  }
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
+
+
+
