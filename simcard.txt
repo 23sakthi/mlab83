@@ -1,0 +1,547 @@
+ Simulation using CloudSIM:
+ 1.https://github.com/Cloudslab/cloudsim/releases
+ and download the source code(zip file
+2.Go to the link https://commons.apache.org/proper/commons-math/download_math.cgi
+ download math4-4.0-beta1-bin.zip file and extract the file
+ 3. Install Eclipse from the googl
+ 4.Click download->choose eclipse IDE for java Developers->Install->Launch
+ 5.Click Launch->eclipse page will be opened
+ 6.Click file->new->java project
+ 7.Enter name and disable the default location and enter the cloudsim folder location that you
+ downloaded from the github and click finish
+8.Now in the package explorer, right click the cloudsim
+9.In properties page,java build path->libraries->click module path->Add external JAR
+10.Go to the math folder and upload all the files by ctrl+A
+ 11.Click Apply and click then apply and close
+12.Now go to eclipse web page->under cloudsim->cloudsim-5.0/modules/cloudsim-examples..
+>open the first folder->click the example1.java and the code will be visible->run the code
+
+
+
+ Performance Analysis using cloud Analyst:
+ 1.Go to the link https://sourceforge.net/projects/cloudanalystnetbeans/
+ the zip file
+ 2.Go to the link https://netbeans.apache.org/front/main/download/nb17/index.html
+ install Apache-NetBeans-17-bin-windows-x64.exe(SHA-512,PGP ASC)
+3.Once you downloaded, click the exe file then configuration takes place
+ 8.Open Project->Go to the cloud analyst folder->click the cloud analyst file->open project
+ 9.The projects will be showed up on the left and then click the play button
+10.World Map is showed up->click configure simulation->Done
+ 
+max-min
+package org.cloudbus.cloudsim.examples; 
+import org.cloudbus.cloudsim.*; 
+import org.cloudbus.cloudsim.core.CloudSim; 
+import org.cloudbus.cloudsim.provisioners.BwProvisionerSimple; 
+import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple; 
+import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple; 
+import java.util.*; 
+public class MinMax { 
+ public static void main(String[] args) { 
+ try { 
+ // Step 1: Initialize the CloudSim library 
+ int numUsers = 1; 
+ Calendar calendar = Calendar.getInstance(); 
+ boolean traceFlag = false; 
+ CloudSim.init(numUsers, calendar, traceFlag); 
+ // Step 2: Create Datacenter 
+ Datacenter datacenter0 = createDatacenter("Datacenter_0"); 
+ // Step 3: Create Broker 
+ DatacenterBroker broker = createBroker(); 
+ int brokerId = broker.getId(); 
+ // Step 4: Create VMs and Cloudlets 
+ List<Vm> vmList = createVMs(brokerId, 3); 
+ List<Cloudlet> cloudletList = createCloudlets(brokerId, 6); 
+ broker.submitVmList(vmList); 
+ // Step 5: Assign Cloudlets to VMs using Min-Max strategy 
+ minMaxCloudletAssignment(broker, cloudletList, vmList); 
+ // Step 6: Start the simulation 
+ CloudSim.startSimulation(); 
+ // Step 7: Get and print results of the cloudlet execution 
+ List<Cloudlet> newList = broker.getCloudletReceivedList(); 
+ CloudSim.stopSimulation(); 
+ printCloudletList(newList); 
+ } catch (Exception e) { 
+ e.printStackTrace(); 
+ } 
+ } 
+ // Helper method to create Datacenter 
+ private static Datacenter createDatacenter(String name) { 
+ List<Host> hostList = new ArrayList<>();
+  
+ // Host Parameters 
+ int mips = 2000; 
+ int ram = 2048; 
+ long storage = 1000000; 
+ int bw = 10000; 
+  
+ List<Pe> peList = new ArrayList<>(); 
+ peList.add(new Pe(0, new PeProvisionerSimple(mips))); 
+  
+ hostList.add(new Host(0, new RamProvisionerSimple(ram), new BwProvisionerSimple(bw),  storage, peList, new VmSchedulerTimeShared(peList))); 
+ hostList.add(new Host(1, new RamProvisionerSimple(ram), new BwProvisionerSimple(bw),  storage, peList, new VmSchedulerTimeShared(peList))); 
+  
+ String arch = "x86"; 
+ String os = "Linux"; 
+ String vmm = "Xen"; 
+ double timeZone = 10.0; 
+ double costPerSec = 3.0; 
+ double costPerMem = 0.05; 
+ double costPerStorage = 0.001; 
+ double costPerBw = 0.0; 
+ DatacenterCharacteristics characteristics = new DatacenterCharacteristics(arch, os, vmm,  hostList, timeZone, costPerSec, costPerMem, costPerStorage, costPerBw);  Datacenter datacenter = null; 
+  
+ try { 
+ datacenter = new Datacenter(name, characteristics, new VmAllocationPolicySimple(hostList),  new LinkedList<>(), 0); 
+ } catch (Exception e) { 
+ e.printStackTrace(); 
+ } 
+ return datacenter; 
+ } 
+ // Helper method to create VMs 
+ private static List<Vm> createVMs(int brokerId, int numVMs) { 
+ List<Vm> vmList = new ArrayList<>(); 
+ int mips = 500; 
+ long size = 10000; 
+ int ram = 512; 
+ long bw = 1000; 
+ int pesNumber = 1; 
+ for (int i = 0; i < numVMs; i++) { 
+ vmList.add(new Vm(i, brokerId, mips, pesNumber, ram, bw, size, "Xen", new  CloudletSchedulerTimeShared())); 
+ }
+ return vmList; 
+ } 
+ // Helper method to create Cloudlets 
+ private static List<Cloudlet> createCloudlets(int brokerId, int numCloudlets) {  List<Cloudlet> cloudletList = new ArrayList<>(); 
+ int length = 40000; // Cloudlet length 
+ long fileSize = 300; // Cloudlet file size 
+ long outputSize = 300; // Cloudlet output size 
+ int pesNumber = 1; // Number of PEs 
+ UtilizationModel utilizationModel = new UtilizationModelFull(); 
+ for (int i = 0; i < numCloudlets; i++) { 
+ Cloudlet cloudlet = new Cloudlet(i, length, pesNumber, fileSize, outputSize, utilizationModel,  utilizationModel, utilizationModel); 
+ cloudlet.setUserId(brokerId); 
+ cloudletList.add(cloudlet); 
+ } 
+ return cloudletList; 
+ } 
+ // Helper method for Min-Max cloudlet assignment 
+ private static void minMaxCloudletAssignment(DatacenterBroker broker, List<Cloudlet> cloudletList,  List<Vm> vmList) { 
+ List<Cloudlet> cloudletSubmissionList = new ArrayList<>(); 
+ Map<Vm, Double> vmCompletionTimes = new HashMap<>(); 
+  
+ // Initialize the map for tracking VM completion times 
+ for (Vm vm : vmList) { 
+ vmCompletionTimes.put(vm, 0.0); 
+ } 
+ while (!cloudletList.isEmpty()) { 
+ Cloudlet minCloudlet = null; 
+ Vm selectedVm = null; 
+ double minCompletionTime = Double.MAX_VALUE; 
+ // Find the VM with the minimum completion time for each cloudlet 
+ for (Cloudlet cloudlet : cloudletList) { 
+ for (Vm vm : vmList) { 
+ double completionTime = vmCompletionTimes.get(vm) + (cloudlet.getCloudletLength() /  vm.getMips()); 
+ // Select the VM with the minimum completion time 
+ if (completionTime < minCompletionTime) { 
+ minCompletionTime = completionTime; 
+ minCloudlet = cloudlet; 
+ selectedVm = vm; 
+ } 
+ } 
+ }
+ // Assign the cloudlet to the selected VM 
+ if (minCloudlet != null && selectedVm != null) { 
+ minCloudlet.setVmId(selectedVm.getId()); 
+ cloudletSubmissionList.add(minCloudlet); 
+ // Update the VM's completion time 
+ vmCompletionTimes.put(selectedVm, vmCompletionTimes.get(selectedVm) +  (minCloudlet.getCloudletLength() / selectedVm.getMips())); 
+ cloudletList.remove(minCloudlet); 
+ } 
+ } 
+ broker.submitCloudletList(cloudletSubmissionList); 
+ } 
+ // Helper method to create Broker 
+ private static DatacenterBroker createBroker() { 
+ DatacenterBroker broker = null; 
+ try { 
+ broker = new DatacenterBroker("Broker"); 
+ } catch (Exception e) { 
+ e.printStackTrace(); 
+ } 
+ return broker; 
+ } 
+ // Helper method to print Cloudlet results 
+ private static void printCloudletList(List<Cloudlet> list) {
+	    String indent = " ";
+	    System.out.println();
+	    System.out.println("========== OUTPUT ==========");
+	    System.out.printf("%-12s %-10s %-15s %-10s %-10s\n", "CloudletID", "STATUS", "Data Center ID", "VM ID", "Time");
+
+	    for (Cloudlet cloudlet : list) {
+	        System.out.printf(
+	            "%-12d %-10s %-15d %-10d %-10.2f\n",
+	            cloudlet.getCloudletId(),
+	            cloudlet.getStatus() == Cloudlet.SUCCESS ? "SUCCESS" : "FAILED",
+	            cloudlet.getResourceId(),
+	            cloudlet.getVmId(),
+	            cloudlet.getActualCPUTime()
+	        );
+	    }
+	}
+
+}
+
+
+package org.cloudbus.cloudsim.examples;
+
+import org.cloudbus.cloudsim.*;
+import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.provisioners.BwProvisionerSimple;
+import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple;
+import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
+
+import java.util.*;
+import org.cloudbus.cloudsim.*; 
+import org.cloudbus.cloudsim.core.CloudSim; 
+import org.cloudbus.cloudsim.provisioners.BwProvisionerSimple; 
+import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple; 
+import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple; 
+import java.util.*; 
+public class MinMinAlgorithm { 
+ public static void main(String[] args) { 
+ try { 
+ // Step 1: Initialize the CloudSim library 
+ int numUsers = 1; 
+ Calendar calendar = Calendar.getInstance(); 
+ boolean traceFlag = false; 
+ CloudSim.init(numUsers, calendar, traceFlag);
+ // Step 2: Create Datacenter 
+ Datacenter datacenter0 = createDatacenter("Datacenter_0"); 
+ // Step 3: Create Broker 
+ DatacenterBroker broker = createBroker(); 
+ int brokerId = broker.getId(); 
+ // Step 4: Create VMs and Cloudlets 
+ List<Vm> vmList = createVMs(brokerId, 3); 
+ List<Cloudlet> cloudletList = createCloudlets(brokerId, 6); 
+ broker.submitVmList(vmList); 
+ // Step 5: Assign Cloudlets to VMs using Min-Min strategy 
+ minMinCloudletAssignment(broker, cloudletList, vmList); 
+ // Step 6: Start the simulation 
+ CloudSim.startSimulation(); 
+ // Step 7: Get and print results of the cloudlet execution 
+ List<Cloudlet> newList = broker.getCloudletReceivedList(); 
+ CloudSim.stopSimulation(); 
+ printCloudletList(newList); 
+ } catch (Exception e) { 
+ e.printStackTrace(); 
+ } 
+ } 
+ // Helper method to create Datacenter 
+ private static Datacenter createDatacenter(String name) { 
+ List<Host> hostList = new ArrayList<>(); 
+ // Host Parameters 
+ int mips = 2000; 
+ int ram = 2048; 
+ long storage = 1000000; 
+ int bw = 10000; 
+ List<Pe> peList = new ArrayList<>(); 
+ peList.add(new Pe(0, new PeProvisionerSimple(mips))); 
+ hostList.add(new Host(0, new RamProvisionerSimple(ram), new  
+BwProvisionerSimple(bw), storage, peList, new VmSchedulerTimeShared(peList)));  hostList.add(new Host(1, new RamProvisionerSimple(ram), new  
+BwProvisionerSimple(bw), storage, peList, new VmSchedulerTimeShared(peList))); 
+ String arch = "x86"; 
+ String os = "Linux"; 
+ String vmm = "Xen"; 
+ double timeZone = 10.0;
+ double costPerSec = 3.0; 
+ double costPerMem = 0.05; 
+ double costPerStorage = 0.001; 
+ double costPerBw = 0.0; 
+ DatacenterCharacteristics characteristics = new DatacenterCharacteristics(arch, os, vmm,  hostList, timeZone, costPerSec, costPerMem, costPerStorage, costPerBw); 
+ Datacenter datacenter = null; 
+ try { 
+ datacenter = new Datacenter(name, characteristics, new  
+VmAllocationPolicySimple(hostList), new LinkedList<>(), 0); 
+ } catch (Exception e) { 
+ e.printStackTrace(); 
+ } 
+ return datacenter; 
+ } 
+ // Helper method to create VMs 
+ private static List<Vm> createVMs(int brokerId, int numVMs) { 
+ List<Vm> vmList = new ArrayList<>(); 
+ int mips = 500; 
+ long size = 10000; 
+ int ram = 512; 
+ long bw = 1000; 
+ int pesNumber = 1; 
+ for (int i = 0; i < numVMs; i++) { 
+ vmList.add(new Vm(i, brokerId, mips, pesNumber, ram, bw, size, "Xen", new  CloudletSchedulerTimeShared())); 
+ } 
+ return vmList; 
+ } 
+ // Helper method to create Cloudlets 
+ private static List<Cloudlet> createCloudlets(int brokerId, int numCloudlets) {  List<Cloudlet> cloudletList = new ArrayList<>(); 
+ int length = 40000; 
+ long fileSize = 300; 
+ long outputSize = 300; 
+ int pesNumber = 1; 
+ UtilizationModel utilizationModel = new UtilizationModelFull(); 
+ for (int i = 0; i < numCloudlets; i++) { 
+ Cloudlet cloudlet = new Cloudlet(i, length, pesNumber, fileSize, outputSize,  utilizationModel, utilizationModel, utilizationModel); 
+ cloudlet.setUserId(brokerId); 
+ cloudletList.add(cloudlet); 
+ } 
+ return cloudletList; 
+ }
+ // Helper method for Min-Min cloudlet assignment 
+ private static void minMinCloudletAssignment(DatacenterBroker broker, List<Cloudlet>  cloudletList, List<Vm> vmList) { 
+ List<Cloudlet> cloudletSubmissionList = new ArrayList<>(); 
+ while (!cloudletList.isEmpty()) { 
+ Cloudlet minCloudlet = null; 
+ Vm selectedVm = null; 
+ double minCompletionTime = Double.MAX_VALUE; 
+ // For each cloudlet, find the VM with the minimum completion time 
+ for (Cloudlet cloudlet : cloudletList) { 
+ for (Vm vm : vmList) { 
+ double completionTime = cloudlet.getCloudletLength() / vm.getMips();  if (completionTime < minCompletionTime) { 
+ minCompletionTime = completionTime; 
+ minCloudlet = cloudlet; 
+ selectedVm = vm; 
+ } 
+ } 
+ } 
+ if (minCloudlet != null && selectedVm != null) { 
+ minCloudlet.setVmId(selectedVm.getId()); 
+ cloudletSubmissionList.add(minCloudlet); 
+ cloudletList.remove(minCloudlet); 
+ } 
+ } 
+ broker.submitCloudletList(cloudletSubmissionList); 
+ } 
+ // Helper method to create Broker 
+ private static DatacenterBroker createBroker() { 
+ DatacenterBroker broker = null; 
+ try { 
+ broker = new DatacenterBroker("Broker"); 
+ } catch (Exception e) { 
+ e.printStackTrace(); 
+ } 
+ return broker; 
+ } 
+ // Helper method to print Cloudlet results 
+ private static void printCloudletList(List<Cloudlet> list) { 
+ String indent = " "; 
+ System.out.println(); 
+ System.out.println("========== OUTPUT =========="); 
+ System.out.println("Cloudlet ID" + indent + "STATUS" + indent + "Data center ID" +  indent + "VM ID" + indent + "Time" + indent + "Start Time" + indent + "Finish Time") ;
+ for (Cloudlet cloudlet : list) { 
+ System.out.print(indent + cloudlet.getCloudletId()); 
+ if (cloudlet.getStatus() == Cloudlet.SUCCESS) {
+ System.out.println(indent + "SUCCESS" + indent + cloudlet.getResourceId() + indent  + cloudlet.getVmId() + indent + cloudlet.getActualCPUTime() + indent +  
+cloudlet.getExecStartTime() + indent + cloudlet.getFinishTime()); 
+ } else { 
+ System.out.println(indent + "FAILED"); 
+ } 
+ } 
+ } 
+} 
+
+package org.cloudbus.cloudsim.examples;
+
+import org.cloudbus.cloudsim.*;
+import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.provisioners.BwProvisionerSimple;
+import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple;
+import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
+
+import java.util.*;
+
+public class Priority {
+
+    public static void main(String[] args) {
+        try {
+            // Step 1: Initialize the CloudSim library
+            int numUsers = 1;
+            Calendar calendar = Calendar.getInstance();
+            boolean traceFlag = false;
+            CloudSim.init(numUsers, calendar, traceFlag);
+
+            // Step 2: Create Datacenter
+            Datacenter datacenter0 = createDatacenter("Datacenter_0");
+
+            // Step 3: Create Broker
+            DatacenterBroker broker = createBroker();
+            int brokerId = broker.getId();
+
+            // Step 4: Create VMs and Cloudlets
+            List<Vm> vmList = createVMs(brokerId, 3); // 3 VMs
+            List<Cloudlet> cloudletList = createCloudlets(brokerId, 6); // 6 Cloudlets
+            broker.submitVmList(vmList);
+
+            // Step 5: Assign Cloudlets to VMs using Priority-Based scheduling
+            priorityBasedScheduling(broker, cloudletList, vmList);
+
+            // Step 6: Start the simulation
+            CloudSim.startSimulation();
+
+            // Step 7: Get and print results of the cloudlet execution
+            List<Cloudlet> newList = broker.getCloudletReceivedList();
+            CloudSim.stopSimulation();
+            printCloudletList(newList);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Helper method to create Datacenter
+    private static Datacenter createDatacenter(String name) {
+        List<Host> hostList = new ArrayList<>();
+
+        // Host Parameters
+        int mips = 2000;
+        int ram = 2048; // MB
+        long storage = 1000000; // MB
+        int bw = 10000; // Mbps
+
+        List<Pe> peList = new ArrayList<>();
+        peList.add(new Pe(0, new PeProvisionerSimple(mips))); // Processing Element
+
+        hostList.add(new Host(
+                0,
+                new RamProvisionerSimple(ram),
+                new BwProvisionerSimple(bw),
+                storage,
+                peList,
+                new VmSchedulerTimeShared(peList)
+        ));
+
+        String arch = "x86";
+        String os = "Linux";
+        String vmm = "Xen";
+        double timeZone = 10.0;
+        double costPerSec = 3.0;
+        double costPerMem = 0.05;
+        double costPerStorage = 0.001;
+        double costPerBw = 0.0;
+
+        DatacenterCharacteristics characteristics = new DatacenterCharacteristics(
+                arch, os, vmm, hostList, timeZone, costPerSec, costPerMem, costPerStorage, costPerBw);
+
+        Datacenter datacenter = null;
+        try {
+            datacenter = new Datacenter(name, characteristics, new VmAllocationPolicySimple(hostList), new LinkedList<>(), 0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return datacenter;
+    }
+
+    // Helper method to create VMs
+    private static List<Vm> createVMs(int brokerId, int numVMs) {
+        List<Vm> vmList = new ArrayList<>();
+        int mips = 1000;
+        long size = 10000; // MB
+        int ram = 512; // MB
+        long bw = 1000; // Mbps
+        int pesNumber = 1; // Number of CPUs
+
+        for (int i = 0; i < numVMs; i++) {
+            vmList.add(new Vm(i, brokerId, mips, pesNumber, ram, bw, size, "Xen", new CloudletSchedulerTimeShared()));
+        }
+        return vmList;
+    }
+
+    // Helper method to create Cloudlets with priorities
+    private static List<Cloudlet> createCloudlets(int brokerId, int numCloudlets) {
+        List<Cloudlet> cloudletList = new ArrayList<>();
+        int length = 40000;
+        long fileSize = 300;
+        long outputSize = 300;
+        int pesNumber = 1;
+        UtilizationModel utilizationModel = new UtilizationModelFull();
+
+        for (int i = 0; i < numCloudlets; i++) {
+            // Create CloudletWithPriority instead of Cloudlet
+            CloudletWithPriority cloudlet = new CloudletWithPriority(i, length, pesNumber, fileSize, outputSize,
+                    utilizationModel, (int)(Math.random() * 10) + 1); // Random priority between 1 and 10
+            cloudlet.setUserId(brokerId);
+            cloudletList.add(cloudlet);
+        }
+        return cloudletList;
+    }
+
+    // Helper method for Priority-Based Cloudlet assignment
+    private static void priorityBasedScheduling(DatacenterBroker broker, List<Cloudlet> cloudletList, List<Vm> vmList) {
+        // Sort cloudlets based on priority (ascending order)
+        cloudletList.sort(Comparator.comparingInt(cloudlet -> ((CloudletWithPriority) cloudlet).getPriority()));
+
+        List<Cloudlet> cloudletSubmissionList = new ArrayList<>();
+        int vmIndex = 0;
+
+        for (Cloudlet cloudlet : cloudletList) {
+            Vm vm = vmList.get(vmIndex);
+            cloudlet.setVmId(vm.getId());
+            cloudletSubmissionList.add(cloudlet);
+
+            // Move to the next VM in round-robin fashion
+            vmIndex = (vmIndex + 1) % vmList.size();
+        }
+        broker.submitCloudletList(cloudletSubmissionList);
+    }
+
+    // Helper method to create Broker
+    private static DatacenterBroker createBroker() {
+        DatacenterBroker broker = null;
+        try {
+            broker = new DatacenterBroker("Broker");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return broker;
+    }
+
+    // Helper method to print Cloudlet results
+    private static void printCloudletList(List<Cloudlet> list) {
+        String indent = " ";
+        System.out.println();
+        System.out.println("========== OUTPUT ==========");
+        System.out.println("Cloudlet ID" + indent + "STATUS" + indent + "Data center ID" + indent
+                + "VM ID" + indent + "Time" + indent + "Start Time" + indent + "Finish Time");
+
+        for (Cloudlet cloudlet : list) {
+            System.out.print(indent + cloudlet.getCloudletId());
+
+            if (cloudlet.getStatus() == Cloudlet.SUCCESS) {
+                System.out.println(indent + "SUCCESS" + indent + cloudlet.getResourceId()
+                        + indent + cloudlet.getVmId() + indent + cloudlet.getActualCPUTime()
+                        + indent + cloudlet.getExecStartTime() + indent + cloudlet.getFinishTime());
+            } else {
+                System.out.println(indent + "FAILED");
+            }
+        }
+    }
+
+    // Custom Cloudlet class with priority field
+    static class CloudletWithPriority extends Cloudlet {
+        private int priority;
+
+        public CloudletWithPriority(int cloudletId, long length, int pesNumber, long fileSize, long outputSize,
+                                    UtilizationModel utilizationModel, int priority) {
+            super(cloudletId, length, pesNumber, fileSize, outputSize, utilizationModel, utilizationModel, utilizationModel);
+            this.priority = priority;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+
+        public void setPriority(int priority) {
+            this.priority = priority;
+        }
+    }
+}
+
+
